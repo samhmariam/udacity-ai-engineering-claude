@@ -1,0 +1,2 @@
+defects returned: 0
+warm-tier total: 40
