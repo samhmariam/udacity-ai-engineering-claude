@@ -1,0 +1,39 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\samue\Downloads\03_eval_obs\Build a Validated, Routed Insurance Policy Extraction Pipeline\04-hitl-routing\solution\.venv\Scripts\policy-extractor.exe\__main__.py", line 10, in <module>
+  File "C:\Users\samue\Downloads\03_eval_obs\Build a Validated, Routed Insurance Policy Extraction Pipeline\04-hitl-routing\solution\policy_extractor\__main__.py", line 82, in main
+    return _cmd_pipeline(args)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samue\Downloads\03_eval_obs\Build a Validated, Routed Insurance Policy Extraction Pipeline\04-hitl-routing\solution\policy_extractor\__main__.py", line 144, in _cmd_pipeline
+    outcome = extract_with_retry(
+              ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samue\Downloads\03_eval_obs\Build a Validated, Routed Insurance Policy Extraction Pipeline\04-hitl-routing\solution\policy_extractor\retry.py", line 48, in extract_with_retry
+    response = client.create(
+               ^^^^^^^^^^^^^^
+  File "C:\Users\samue\Downloads\03_eval_obs\Build a Validated, Routed Insurance Policy Extraction Pipeline\04-hitl-routing\solution\policy_extractor\client.py", line 27, in create
+    result: Message = self._client.messages.create(**kwargs)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samue\Downloads\03_eval_obs\Build a Validated, Routed Insurance Policy Extraction Pipeline\04-hitl-routing\solution\.venv\Lib\site-packages\anthropic\_utils\_utils.py", line 294, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samue\Downloads\03_eval_obs\Build a Validated, Routed Insurance Policy Extraction Pipeline\04-hitl-routing\solution\.venv\Lib\site-packages\anthropic\resources\messages\messages.py", line 1050, in create
+    return self._post(
+           ^^^^^^^^^^^
+  File "C:\Users\samue\Downloads\03_eval_obs\Build a Validated, Routed Insurance Policy Extraction Pipeline\04-hitl-routing\solution\.venv\Lib\site-packages\anthropic\_base_client.py", line 1536, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samue\Downloads\03_eval_obs\Build a Validated, Routed Insurance Policy Extraction Pipeline\04-hitl-routing\solution\.venv\Lib\site-packages\anthropic\_base_client.py", line 1137, in request
+    response, prepared = self._attempt_request(
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samue\Downloads\03_eval_obs\Build a Validated, Routed Insurance Policy Extraction Pipeline\04-hitl-routing\solution\.venv\Lib\site-packages\anthropic\_base_client.py", line 1282, in _attempt_request
+    request = self._build_request(options, retries_taken=retries_taken)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samue\Downloads\03_eval_obs\Build a Validated, Routed Insurance Policy Extraction Pipeline\04-hitl-routing\solution\.venv\Lib\site-packages\anthropic\_base_client.py", line 539, in _build_request
+    headers = self._build_headers(options, retries_taken=retries_taken)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\samue\Downloads\03_eval_obs\Build a Validated, Routed Insurance Policy Extraction Pipeline\04-hitl-routing\solution\.venv\Lib\site-packages\anthropic\_base_client.py", line 469, in _build_headers
+    self._validate_headers(headers_dict, custom_headers)
+  File "C:\Users\samue\Downloads\03_eval_obs\Build a Validated, Routed Insurance Policy Extraction Pipeline\04-hitl-routing\solution\.venv\Lib\site-packages\anthropic\_client.py", line 392, in _validate_headers
+    raise TypeError(
+TypeError: "Could not resolve authentication method. Expected one of api_key, auth_token, or credentials to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted"

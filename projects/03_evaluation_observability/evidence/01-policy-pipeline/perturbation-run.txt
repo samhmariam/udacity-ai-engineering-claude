@@ -1,0 +1,21 @@
+2026-07-17 18:42:28,667 INFO HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-07-17 18:42:28,710 INFO validation_failed
+{
+  "decisions_written": 0,
+  "auto_approve": 0,
+  "human_review": 0,
+  "spot_check": 0,
+  "escalations": 1,
+  "pattern_summary": {
+    "premium_amount_absent": {
+      "count": 1,
+      "policies": [
+        "POL-2025-006"
+      ],
+      "categories": [
+        "missing_source"
+      ]
+    }
+  },
+  "output_path": "..\\..\\..\\evidence\\01-policy-pipeline\\perturbed-routing-decisions.json"
+}

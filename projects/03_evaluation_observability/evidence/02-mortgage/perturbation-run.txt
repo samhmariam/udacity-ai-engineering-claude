@@ -1,0 +1,27 @@
+﻿{
+  "extraction": {
+    "borrower": {
+      "full_name": "Marcus T. Hollingsworth",
+      "coborrower_name": null,
+      "ssn_last4": null,
+      "date_of_birth": null,
+      "email": null,
+      "phone": null
+    },
+    "property": null,
+    "loan": null,
+    "income": {
+      "base_monthly": 5416.67,
+      "bonus_monthly": 1250.0,
+      "bonus_ytd": null,
+      "commission_monthly": 2140.0,
+      "overtime_monthly": 385.5,
+      "other_monthly": 450.0,
+      "stated_monthly_total": 10892.17
+    }
+  },
+  "validation": {
+    "consistent": true,
+    "discrepancies": []
+  }
+}
