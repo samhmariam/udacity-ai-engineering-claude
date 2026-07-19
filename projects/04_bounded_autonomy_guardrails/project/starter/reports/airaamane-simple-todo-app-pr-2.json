@@ -1,0 +1,314 @@
+{
+  "pullRequest": {
+    "owner": "airaamane",
+    "repo": "simple-todo-app",
+    "number": 2
+  },
+  "fileReviews": [
+    {
+      "file": "src/database.ts",
+      "codeQuality": {
+        "file": "src/database.ts",
+        "issues": [
+          {
+            "line": 6,
+            "severity": "critical",
+            "category": "security",
+            "description": "The Database interface accepts raw SQL strings with any[] parameters, creating a SQL injection vector when user input is concatenated into queries. Any consumer of this interface can construct unsafe queries like `db.query('SELECT * FROM users WHERE id=' + userInput)`.",
+            "suggestion": "Replace the generic SQL interface with type-safe query methods (e.g., findById, create, update) or enforce parameterized queries through a query builder pattern that prevents string concatenation."
+          },
+          {
+            "line": 6,
+            "severity": "high",
+            "category": "bug-risk",
+            "description": "The return type `Promise<any[]>` erases all type safety, allowing runtime errors when consumers assume incorrect result shapes. Calling code cannot verify columns, types, or structure at compile time.",
+            "suggestion": "Use generics like `query<T>(sql: string, params?: any[]): Promise<T[]>` or define specific result types for each query method to enable type checking and IDE autocomplete."
+          },
+          {
+            "line": 11,
+            "severity": "medium",
+            "category": "bug-risk",
+            "description": "The MockDatabase.data field is initialized but never used in the query method, which always returns an empty array. This breaks testing scenarios where developers expect mock data to be returned.",
+            "suggestion": "Remove the unused `data` field or implement basic query parsing to return mock results, allowing the mock to serve its purpose in tests."
+          },
+          {
+            "line": 13,
+            "severity": "medium",
+            "category": "maintainability",
+            "description": "The query method accepts a `params` array but never validates or uses it, silently ignoring developer-provided parameters. This creates confusion about whether parameterization is supported.",
+            "suggestion": "Either implement parameter substitution logic or document that this mock does not support parameters and throws an error when they are provided."
+          },
+          {
+            "line": 19,
+            "severity": "low",
+            "category": "best-practice",
+            "description": "Exporting a singleton `db` instance prevents dependency injection and makes testing difficult, as all modules share the same mock instance with no way to reset state between tests.",
+            "suggestion": "Export a factory function `createDatabase()` or the MockDatabase class itself, allowing consumers to instantiate isolated instances for testing."
+          }
+        ],
+        "overallScore": 3,
+        "summary": "Critical SQL injection vulnerability due to accepting raw SQL strings without enforcement of parameterization. Type erasure with `any[]` eliminates compile-time safety. Mock implementation has unused fields and non-functional parameter handling. Singleton export prevents proper test isolation."
+      },
+      "testCoverage": {
+        "file": "src/database.ts",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "class",
+            "location": "Database.query method contract",
+            "priority": "critical",
+            "reasoning": "No tests verify the Database interface contract is honored by implementations, especially parameter handling and return type Promise resolution/rejection.",
+            "suggestedTest": "Create a test suite that verifies MockDatabase implements Database correctly: instantiate MockDatabase, call query with valid SQL string and params array, assert it returns a Promise that resolves to an array, then call query with just SQL string and assert params defaults correctly."
+          },
+          {
+            "type": "edge-case",
+            "location": "MockDatabase.query - lines 13-15",
+            "priority": "high",
+            "reasoning": "The async query method has no error handling, and there are no tests for rejection scenarios or invalid inputs that could cause runtime errors.",
+            "suggestedTest": "Test error scenarios: call query with null or undefined sql parameter and assert it throws TypeError, call query with non-array params and assert appropriate error, call query that would cause internal Map operations to fail and verify error propagation."
+          },
+          {
+            "type": "edge-case",
+            "location": "MockDatabase.data Map - line 11",
+            "priority": "high",
+            "reasoning": "The private data Map is initialized but never populated or queried in the mock implementation, creating ambiguity about intended behavior and state management.",
+            "suggestedTest": "Test state management: instantiate MockDatabase, verify data Map starts empty, execute multiple query calls with different SQL and params, assert data Map remains consistent and queries are isolated from each other's state."
+          },
+          {
+            "type": "edge-case",
+            "location": "MockDatabase singleton export - line 19",
+            "priority": "medium",
+            "reasoning": "The exported db instance is a singleton that could cause test pollution or unexpected shared state between test cases if not properly isolated.",
+            "suggestedTest": "Test singleton behavior: import db instance in multiple test cases, execute query on db in first test and verify state, execute different query in second test and assert no state pollution occurred between tests."
+          },
+          {
+            "type": "edge-case",
+            "location": "MockDatabase.query params default - line 13",
+            "priority": "medium",
+            "reasoning": "Default empty array for params parameter needs boundary testing to ensure it handles undefined, null, empty array, and populated array cases consistently.",
+            "suggestedTest": "Test params boundary cases: call query with params as undefined and verify empty array default, call query with params as null and assert behavior, call query with empty array and populated array and verify all cases resolve successfully."
+          }
+        ],
+        "coverageEstimate": 0,
+        "summary": "The database.ts file has zero test coverage. Critical gaps include no verification of the Database interface contract, no async error handling tests, and no validation of the MockDatabase implementation behavior. The private data Map is unused in the current implementation, suggesting incomplete mock functionality. The exported singleton instance poses test isolation risks."
+      },
+      "refactorings": {
+        "file": "src/database.ts",
+        "suggestions": [
+          {
+            "type": "extract-function",
+            "location": "lines 10-16",
+            "impact": "medium",
+            "description": "Extract MockDatabase to a separate exported class. The current singleton pattern limits testability and prevents multiple database instances.",
+            "before": "class MockDatabase implements Database {\n  private data: Map<string, any[]> = new Map();\n  async query(sql: string, params: any[] = []): Promise<any[]> {\n    return [];\n  }\n}\nexport const db = new MockDatabase();",
+            "after": "export class MockDatabase implements Database {\n  private data: Map<string, any[]> = new Map();\n  async query(sql: string, params: any[] = []): Promise<any[]> {\n    return [];\n  }\n}\nexport const db = new MockDatabase();",
+            "benefits": "Allows tests to create isolated database instances. Enables dependency injection by exposing the class constructor."
+          },
+          {
+            "type": "modernize",
+            "location": "lines 5-6",
+            "impact": "medium",
+            "description": "Replace 'any[]' with generic types for type safety. Current signature loses type information for query results and parameters.",
+            "before": "export interface Database {\n  query(sql: string, params?: any[]): Promise<any[]>;\n}",
+            "after": "export interface Database {\n  query<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>;\n}",
+            "benefits": "Preserves type information through the query chain. Reduces runtime errors by enabling compile-time type checking."
+          },
+          {
+            "type": "simplify",
+            "location": "line 11",
+            "impact": "low",
+            "description": "Remove unused 'data' property from MockDatabase. The Map is initialized but never accessed in the query method.",
+            "before": "class MockDatabase implements Database {\n  private data: Map<string, any[]> = new Map();\n  async query(sql: string, params: any[] = []): Promise<any[]> {",
+            "after": "class MockDatabase implements Database {\n  async query(sql: string, params: any[] = []): Promise<any[]> {",
+            "benefits": "Eliminates dead code and reduces memory allocation. Clarifies that this is a pure mock with no state."
+          }
+        ],
+        "summary": "The database module has 3 refactoring opportunities focusing on testability and type safety. Highest impact: expose MockDatabase class for dependency injection (medium), add generic types to Database interface (medium), remove unused data property (low)."
+      }
+    },
+    {
+      "file": "src/todo.ts",
+      "codeQuality": {
+        "file": "src/todo.ts",
+        "issues": [
+          {
+            "line": 118,
+            "severity": "high",
+            "category": "security",
+            "description": "generateId() uses Date.now() and Math.random() which are not cryptographically secure and can produce collisions under concurrent load, potentially causing data overwrites or integrity violations.",
+            "suggestion": "Use a cryptographically secure UUID library like crypto.randomUUID() or the 'uuid' package to generate guaranteed-unique identifiers."
+          },
+          {
+            "line": 40,
+            "severity": "high",
+            "category": "security",
+            "description": "Manual HTML entity escaping is incomplete (missing script context, URL context, CSS context) and incorrectly applied at storage time instead of output rendering, creating XSS risk in non-HTML contexts.",
+            "suggestion": "Remove sanitization from storage layer; apply context-aware output encoding at render time using a library like DOMPurify or framework-specific escaping."
+          },
+          {
+            "line": 70,
+            "severity": "high",
+            "category": "bug-risk",
+            "description": "Database operations lack error handling and transaction management; a failed INSERT can crash the application or leave the system in an inconsistent state without proper error propagation to the caller.",
+            "suggestion": "Wrap database operations in try-catch blocks and consider using transactions for data consistency; let errors propagate with meaningful context."
+          },
+          {
+            "line": 88,
+            "severity": "medium",
+            "category": "security",
+            "description": "getTodoById, updateTodoStatus, and deleteTodo accept arbitrary string IDs without validation, allowing malformed or excessively long input to reach the database layer.",
+            "suggestion": "Validate ID format matches the expected pattern (e.g., /^todo_\\d+_[a-z0-9]+$/) before executing queries to prevent potential abuse or performance degradation."
+          },
+          {
+            "line": 103,
+            "severity": "low",
+            "category": "style",
+            "description": "Missing semicolon after db.query() statement violates TypeScript style conventions and can cause issues with certain AST-based tooling or minifiers.",
+            "suggestion": "Add semicolon after the db.query() call on line 103 to maintain consistent code style."
+          }
+        ],
+        "overallScore": 52,
+        "summary": "The code demonstrates good intentions with parameterized queries and input validation, but suffers from critical security and reliability flaws. The ID generation using Date.now() + Math.random() creates collision risk under concurrency. XSS sanitization is misapplied at storage rather than output and is incomplete for all contexts. Database operations lack error handling, risking crashes and inconsistent state. Input validation is missing for ID parameters across multiple functions."
+      },
+      "testCoverage": {
+        "file": "src/todo.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/todo.test.ts"
+        ],
+        "untestedPaths": [
+          {
+            "type": "function",
+            "location": "createTodo (lines 50-72)",
+            "priority": "critical",
+            "reasoning": "Database insertion failure is uncovered. If db.query throws, the error propagates without transaction rollback or cleanup, risking data inconsistency.",
+            "suggestedTest": "Mock db.query to throw a database error after validation passes. Call createTodo with valid input and assert it throws the database error and doesn't leave partial state."
+          },
+          {
+            "type": "edge-case",
+            "location": "validateTodoInput (line 30)",
+            "priority": "high",
+            "reasoning": "Edge case where description is exactly 1000 characters is untested. Boundary validation prevents data truncation and ensures consistent behavior at limits.",
+            "suggestedTest": "Create input with title='Valid' and description of exactly 1000 characters. Call validateTodoInput and assert it returns true, then test 1001 characters and assert false."
+          },
+          {
+            "type": "function",
+            "location": "getTodoById (lines 87-95)",
+            "priority": "high",
+            "reasoning": "Database query failure when fetching by ID is uncovered. Network or connection errors could leave the application in an error state without proper handling.",
+            "suggestedTest": "Mock db.query to reject with a connection error. Call getTodoById with a valid ID and assert the promise rejects with the database error."
+          },
+          {
+            "type": "edge-case",
+            "location": "sanitizeInput (lines 39-45)",
+            "priority": "medium",
+            "reasoning": "Combined XSS attack vectors with multiple special characters in sequence are untested. Attackers often chain encoding attempts to bypass single-character sanitization.",
+            "suggestedTest": "Pass input containing \"<script>alert('xss')</script>\" to sanitizeInput. Assert output is \"&lt;script&gt;alert(&#039;xss&#039;)&lt;/script&gt;\" with all characters properly escaped."
+          },
+          {
+            "type": "function",
+            "location": "updateTodoStatus (lines 100-103)",
+            "priority": "medium",
+            "reasoning": "Missing semicolon on line 103 and no validation that the todo exists before update. Silent failures or updating non-existent records could occur without detection.",
+            "suggestedTest": "Mock db.query to return 0 affected rows. Call updateTodoStatus with a non-existent ID and completed=true, then verify the function completes without throwing and returns appropriate indication of failure."
+          }
+        ],
+        "coverageEstimate": 45,
+        "summary": "The code has critical security measures (parameterized queries, XSS sanitization) but lacks comprehensive error handling tests. Database failure paths in createTodo, getTodoById, and updateTodoStatus are likely uncovered. Boundary validation at exactly 1000 characters and combined XSS vectors need verification."
+      },
+      "refactorings": {
+        "file": "src/todo.ts",
+        "suggestions": [
+          {
+            "type": "extract-function",
+            "location": "lines 55-65",
+            "impact": "medium",
+            "description": "Extract todo object construction into a factory function. This separates data transformation from business logic and improves testability.",
+            "before": "const sanitizedTitle = sanitizeInput(input.title.trim());\nconst sanitizedDescription = sanitizeInput(input.description || '');\n\nconst todo: Todo = {\n  id: generateId(),\n  title: sanitizedTitle,\n  description: sanitizedDescription,\n  completed: false,\n  createdAt: new Date()\n};",
+            "after": "const todo = buildTodoFromInput(input);\n\n// New function:\nfunction buildTodoFromInput(input: CreateTodoInput): Todo {\n  return {\n    id: generateId(),\n    title: sanitizeInput(input.title.trim()),\n    description: sanitizeInput(input.description || ''),\n    completed: false,\n    createdAt: new Date()\n  };\n}",
+            "benefits": "Reduces createTodo complexity and enables isolated testing of todo construction. Makes it easier to modify todo initialization logic without touching the persistence layer."
+          },
+          {
+            "type": "simplify",
+            "location": "lines 24-34",
+            "impact": "medium",
+            "description": "Consolidate validation checks using early returns and extract magic numbers to named constants. This improves readability and maintainability.",
+            "before": "if (!input.title || input.title.trim().length === 0) {\n  return false;\n}\nif (input.title.length > 200) {\n  return false;\n}\nif (input.description && input.description.length > 1000) {\n  return false;\n}\nreturn true;",
+            "after": "const MAX_TITLE_LENGTH = 200;\nconst MAX_DESCRIPTION_LENGTH = 1000;\n\nconst trimmedTitle = input.title?.trim();\nif (!trimmedTitle) return false;\nif (trimmedTitle.length > MAX_TITLE_LENGTH) return false;\nif (input.description?.length > MAX_DESCRIPTION_LENGTH) return false;\nreturn true;",
+            "benefits": "Named constants make validation rules self-documenting and easier to maintain. Reduces duplication of trim() call and clarifies intent."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "lines 67-72",
+            "impact": "low",
+            "description": "Extract database operation into a reusable pattern. This reduces duplication across CRUD operations and centralizes query execution logic.",
+            "before": "const query = 'INSERT INTO todos (id, title, description, completed, created_at) VALUES ($1, $2, $3, $4, $5)';\nconst params = [todo.id, todo.title, todo.description, todo.completed, todo.createdAt];\n\nawait db.query(query, params);",
+            "after": "await executeQuery(\n  'INSERT INTO todos (id, title, description, completed, created_at) VALUES ($1, $2, $3, $4, $5)',\n  [todo.id, todo.title, todo.description, todo.completed, todo.createdAt]\n);\n\n// Reusable helper:\nasync function executeQuery(query: string, params?: any[]) {\n  return await db.query(query, params);\n}",
+            "benefits": "Provides a single point for adding query logging, error handling, or performance monitoring. Reduces visual clutter in business logic functions."
+          }
+        ],
+        "summary": "The file demonstrates good security practices with parameterized queries and input sanitization. Key improvements include extracting todo construction into a factory function (medium impact), simplifying validation with named constants (medium impact), and introducing a query execution pattern to reduce duplication (low impact)."
+      }
+    }
+  ],
+  "summary": {
+    "totalFiles": 2,
+    "overallScore": 27.5,
+    "criticalIssues": 1,
+    "highPriorityTests": 6,
+    "refactoringOpportunities": 6
+  },
+  "recommendations": [
+    {
+      "priority": "critical",
+      "category": "Security",
+      "description": "The Database interface design enables SQL injection by accepting raw SQL strings without enforcing parameterization. Replace with type-safe query methods or a query builder that prevents string concatenation.",
+      "files": [
+        "src/database.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Security",
+      "description": "Replace insecure ID generation (Date.now() + Math.random()) with cryptographically secure UUIDs using crypto.randomUUID() to prevent collision-based data corruption under concurrent load.",
+      "files": [
+        "src/todo.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Security",
+      "description": "Remove incomplete XSS sanitization from storage layer and apply context-aware output encoding at render time. Current implementation creates false security assumptions and doesn't protect all attack vectors.",
+      "files": [
+        "src/todo.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Reliability",
+      "description": "Add comprehensive error handling for all database operations. Failed queries currently crash the application or leave inconsistent state without proper error propagation.",
+      "files": [
+        "src/todo.ts"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Testing",
+      "description": "Add test coverage for database error scenarios and boundary conditions. Critical paths like createTodo failure, getTodoById errors, and 1000-character description boundary are untested.",
+      "files": [
+        "src/todo.ts",
+        "src/database.ts"
+      ]
+    }
+  ],
+  "metadata": {
+    "analyzedAt": "2026-07-19T17:05:38.566Z",
+    "duration": 203834,
+    "agentVersions": {
+      "code-quality-analyzer": "1.0.0",
+      "test-coverage-analyzer": "1.0.0",
+      "refactoring-suggester": "1.0.0"
+    }
+  }
+}

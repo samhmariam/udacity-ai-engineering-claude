@@ -42,7 +42,7 @@ src/
   main.ts                       CLI entry point
   orchestrator.ts               SDK query and aggregation workflow
 tests/                          Schema, utility, and orchestrator tests
-reports/                        Generated review reports
+reports/                        Generated review reports (created by the CLI)
 ```
 
 ## Prerequisites
@@ -137,7 +137,7 @@ The `--` forwards the repository arguments through npm to the CLI.
 
 ## Generated reports
 
-Every successful review writes three PR-specific files to `reports/`:
+Every successful review creates `reports/` when needed and writes three PR-specific files:
 
 ```text
 reports/<owner>-<repo>-pr-<number>.md
@@ -145,7 +145,7 @@ reports/<owner>-<repo>-pr-<number>.html
 reports/<owner>-<repo>-pr-<number>.json
 ```
 
-It also updates `reports/report.md`, `reports/report.html`, and `reports/report.json` as aliases for the latest review. Running all three required `airaamane/simple-todo-app` reviews therefore creates the nine distinct submission files while retaining the latest aliases.
+It also updates `reports/report.md`, `reports/report.html`, and `reports/report.json` as aliases for the latest review. Running all three required `airaamane/simple-todo-app` reviews therefore creates the nine distinct submission files while retaining the latest aliases. The directory is not ignored by Git so the required report files can be included in the project submission.
 
 The JSON output contains pull request metadata, per-file code-quality findings, missing-test suggestions, refactoring recommendations, aggregate scores, and analysis metadata. Scores are validated as numbers from 0 through 100.
 

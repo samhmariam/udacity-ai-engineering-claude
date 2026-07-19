@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Review Report</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 24px;
+      background: #f8f9fa;
+      color: #212529;
+    }
+    h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 12px; }
+    .summary {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin: 24px 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+    }
+    .metric { text-align: center; }
+    .metric-value { font-size: 2em; font-weight: bold; color: #3498db; }
+    .metric-label { color: #6c757d; font-size: 0.9em; }
+    ul { list-style: none; padding: 0; }
+    li { padding: 12px; margin: 8px 0; border-radius: 4px; background: white; }
+    .rec-critical { border-left: 4px solid #e74c3c; }
+    .rec-high { border-left: 4px solid #f39c12; }
+    .rec-medium { border-left: 4px solid #3498db; }
+    .rec-low { border-left: 4px solid #27ae60; }
+    .priority { font-weight: bold; margin-right: 8px; }
+    .rec-critical .priority { color: #e74c3c; }
+    .rec-high .priority { color: #f39c12; }
+    .rec-medium .priority { color: #3498db; }
+    .rec-low .priority { color: #27ae60; }
+    footer { text-align: center; color: #6c757d; margin-top: 32px; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Code Review Report</h1>
+  
+  <div class="summary">
+    <div class="metric">
+      <div class="metric-value">72</div>
+      <div class="metric-label">Overall Score</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value">1</div>
+      <div class="metric-label">Files Reviewed</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value">0</div>
+      <div class="metric-label">Critical Issues</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value">6</div>
+      <div class="metric-label">Tests Needed</div>
+    </div>
+    <div class="metric">
+      <div class="metric-value">6</div>
+      <div class="metric-label">Refactorings</div>
+    </div>
+  </div>
+
+  <h2>🎯 Top Recommendations</h2>
+  <ul>
+      <li class="rec-critical">
+        <span class="priority">[CRITICAL]</span>
+        <strong>Testing</strong>: Add comprehensive test coverage for security-critical sanitization and validation functions. Currently at 0% coverage with critical XSS prevention (sanitizeInput) and email validation (isValidEmail) completely untested.
+        <br><small>Files: fixtures/clean-code.ts</small>
+      </li>
+    
+      <li class="rec-high">
+        <span class="priority">[HIGH]</span>
+        <strong>Bug Risk</strong>: Implement the commented-out database persistence call in saveUser() or throw NotImplementedError to prevent silent data loss. Currently the function succeeds without persisting data.
+        <br><small>Files: fixtures/clean-code.ts</small>
+      </li>
+    
+      <li class="rec-high">
+        <span class="priority">[HIGH]</span>
+        <strong>Security</strong>: Replace manual XSS sanitization with a proven library (DOMPurify, sanitize-html) or enhance to handle event handlers, javascript: URLs, CSS injection, and proper ampersand encoding.
+        <br><small>Files: fixtures/clean-code.ts</small>
+      </li>
+    
+      <li class="rec-high">
+        <span class="priority">[HIGH]</span>
+        <strong>Security</strong>: Strengthen email validation regex to be more RFC-compliant and reject clearly malformed patterns like 'user@@domain.com' or 'user@domain..com'.
+        <br><small>Files: fixtures/clean-code.ts</small>
+      </li>
+    
+      <li class="rec-medium">
+        <span class="priority">[MEDIUM]</span>
+        <strong>Reliability</strong>: Replace Date.now() + Math.random() ID generation with crypto.randomUUID() to eliminate collision risk in high-concurrency scenarios.
+        <br><small>Files: fixtures/clean-code.ts</small>
+      </li>
+    </ul>
+
+  <footer>
+    Generated at 2026-07-19T15:57:02.657Z • Duration: 356390ms
+  </footer>
+</body>
+</html>
