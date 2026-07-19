@@ -1,0 +1,32 @@
+
+> claude-multiagent-code-review-starter@1.0.0 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90mC:/Users/samue/Downloads/Udacity/Nanodegree/udacity-ai-engineering-claude/projects/04_bounded_autonomy_guardrails/project/starter[39m
+
+ [32mÔ£ô[39m tests/utils.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+ [32mÔ£ô[39m tests/schemas.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32mÔ£ô[39m tests/orchestrator.test.ts [2m([22m[2m7 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[32m 8[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m37 passed[39m[22m[2m | [22m[33m1 skipped[39m[90m (38)[39m
+[2m   Start at [22m 18:52:50
+[2m   Duration [22m 1.05s[2m (transform 514ms, setup 0ms, import 1.04s, tests 106ms, environment 1ms)[22m
+
+npm test 2>&1 | Tee-Object -FilePath test-output.txt                              
+
+> claude-multiagent-code-review-starter@1.0.0 test
+> vitest run
+
+
+ RUN  v4.1.10 C:/Users/samue/Downloads/Udacity/Nanodegree/udacity-ai-engineering-claude/projects/04_bounded_autonomy_guardrails/project/starter
+
+ Ô£ô tests/utils.test.ts (8 tests) 61ms
+ Ô£ô tests/schemas.test.ts (23 tests) 36ms
+ Ô£ô tests/orchestrator.test.ts (7 tests | 1 skipped) 8ms
+
+ Test Files  3 passed (3)
+      Tests  37 passed | 1 skipped (38)
+   Start at  18:52:50
+   Duration  1.05s (transform 514ms, setup 0ms, import 1.04s, tests 106ms, environment 1ms)

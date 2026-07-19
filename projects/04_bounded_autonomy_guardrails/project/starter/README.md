@@ -1,192 +1,211 @@
 # Enterprise Multi-Agent Code Review Orchestrator
 
-Build a production-ready multi-agent system that automates code review using the Claude Agent SDK.
+A completed TypeScript CLI that reviews GitHub pull requests with the Claude Agent SDK. It fetches pull request data through GitHub MCP, delegates analysis to three specialized agents, validates the combined result with Zod, and writes Markdown, HTML, and JSON reports.
 
-## Project Overview
+## Features
 
-This system uses multiple specialized AI agents working together to provide comprehensive code reviews:
+- Coordinates code-quality, test-coverage, and refactoring agents through the SDK's `Task` tool.
+- Fetches pull request metadata and changed files through the GitHub MCP server.
+- Provides ESLint analysis through the ESLint MCP server.
+- Uses Claude Skills for specialized JavaScript and security analysis.
+- Enforces a structured `ReviewReport` response with JSON Schema and Zod validation.
+- Recalculates summary metrics from validated file-level findings.
+- Excludes documentation files such as README files from test-coverage analysis.
+- Produces readable Markdown and HTML reports plus machine-readable JSON.
+- Includes CLI validation, structured logging, timeouts, exponential-backoff retries, and sliding-window rate limiting.
 
-- **Main Orchestrator** - Coordinates the review process and aggregates results
-- **Code Quality Analyzer** - Identifies code smells, anti-patterns, and best practice violations
-- **Test Coverage Analyzer** - Evaluates test completeness and suggests missing test cases
-- **Refactoring Suggester** - Recommends architectural improvements and refactoring opportunities
+## How it works
 
-## What's Provided
+```text
+CLI
+  -> Orchestrator
+     -> GitHub MCP: pull request metadata and changed files
+     -> Code Quality Analyzer: security, performance, maintainability
+     -> Test Coverage Analyzer: untested paths and concrete test cases
+     -> Refactoring Suggester: structure, clarity, modernization
+  -> ReviewReportSchema validation
+  -> Markdown, HTML, and JSON reports
+```
 
-This starter includes the infrastructure you need:
+The orchestrator explicitly invokes all three registered subagents. Each subagent returns findings shaped for its corresponding Zod schema, and the orchestrator aggregates those findings into `ReviewReportSchema` from `src/types/report-types.ts`.
 
-- **Type Definitions** (`src/types/`) - Zod schemas for validation
-- **Logger** (`src/utils/logger.ts`) - Winston structured logging
-- **Report Generator** (`src/utils/report-generator.ts`) - Markdown/HTML/JSON report generation
-- **Project Config** - `package.json`, `tsconfig.json`, `.env.example`
-- **Test Skeletons** (`tests/`) - Test file structure
-- **Example Skill** (`.claude/skills/`) - Sample Claude skill
+## Project structure
 
-## What You Need to Implement
+```text
+.claude/skills/                 Claude Skills used during analysis
+src/
+  agents/                       Specialized AgentDefinition objects
+  config/mcp.config.ts          GitHub and ESLint MCP server configuration
+  prompts/                      Orchestrator and subagent prompts
+  types/                        Zod schemas and TypeScript result types
+  utils/                        Reports, logging, errors, and rate limiting
+  main.ts                       CLI entry point
+  orchestrator.ts               SDK query and aggregation workflow
+tests/                          Schema, utility, and orchestrator tests
+reports/                        Generated review reports
+```
 
-Your tasks:
+## Prerequisites
 
-1. **Agent Definitions** (`src/agents/`)
-   - Code Quality Analyzer
-   - Test Coverage Analyzer
-   - Refactoring Suggester
+- Node.js 18 or newer
+- npm
+- A GitHub personal access token with read access to the repositories being reviewed
+- One Claude authentication method:
+  - an Anthropic API key, or
+  - AWS credentials with access to Claude on Amazon Bedrock
+- An Anthropic model identifier appropriate for the selected authentication method
 
-2. **Prompts** (`src/prompts/`)
-   - Orchestrator prompt
-   - Agent-specific prompts
+The MCP servers are launched with `npx` when a review starts, so the machine must also be able to download or resolve their npm packages.
 
-3. **MCP Configuration** (`src/config/mcp.config.ts`)
-   - GitHub MCP server
-   - ESLint MCP server
+## Installation
 
-4. **Orchestrator** (`src/orchestrator.ts`)
-   - Main coordination logic
-   - Agent spawning and result aggregation
-
-5. **Main Entry Point** (`src/main.ts`)
-   - CLI argument parsing
-   - Environment validation
-   - Report generation
-
-6. **Error Handler** (Recommended) (`src/utils/error-handler.ts`)
-   - Custom `ReviewError` class
-   - Retry logic with exponential backoff
-   - Timeout wrapper
-
-7. **Rate Limiter** (Optional) (`src/utils/rate-limiter.ts`)
-   - Token bucket algorithm with sliding window
-   - Request and token tracking
-   - Concurrent request management
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- Anthropic API access (provided in Vocareum workspace) or [your own API key](https://console.anthropic.com/)
-- [GitHub Personal Access Token](https://github.com/settings/tokens) (recommended - scopes: `repo`, `read:org`)
-
-### Installation
-
-**In Vocareum Workspace (Recommended):**
-
-Your workspace comes pre-configured with Anthropic API credentials.
+From the repository root:
 
 ```bash
-# Install dependencies from repository root (uses npm workspaces)
-cd /voc/work/cd14715-claude-code-classroom
 npm install
-
-# Navigate to project and configure
-cd project/starter
-cp .env.example .env
+cd projects/04_bounded_autonomy_guardrails/project/starter
 ```
 
-**Local Setup:**
+This project is part of an npm workspace. Running `npm install` from the repository root installs its dependencies. Running it directly from this directory is also supported.
 
-```bash
-# Clone the repository
-git clone https://github.com/udacity/cd14715-claude-code-classroom.git
-cd cd14715-claude-code-classroom/project/starter
+## Configuration
 
-# Install dependencies
-npm install
+Create a `.env` file in this directory or export the same variables in your shell. The `.env` file is ignored by Git; never commit credentials.
 
-# Configure environment
-cp .env.example .env
-```
+### Anthropic API
 
-### Configuration
-
-Edit `.env` with your settings:
-
-**In Vocareum Workspace:**
-```bash
-# API credentials are already in your environment - don't add them here
-
-# Model Configuration (REQUIRED)
+```dotenv
+GITHUB_TOKEN=github_pat_your_token
+ANTHROPIC_API_KEY=sk-ant-your_key
 ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
-
-# Project root (REQUIRED)
-PROJECT_ROOT=/voc/work/cd14715-claude-code-classroom/project/starter
-
-# GitHub Token (RECOMMENDED for higher rate limits)
-# GITHUB_TOKEN=ghp_your-token-here
-
-# Logging level (optional)
-LOG_LEVEL=info
 ```
 
-**Local Setup with Your Own API Key:**
-```bash
-# Your Anthropic API key
-ANTHROPIC_API_KEY=sk-ant-your-key-here
+### AWS Bedrock
 
-# Model Configuration (REQUIRED)
-ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
-
-# Project root (REQUIRED - update to your path)
-PROJECT_ROOT=/absolute/path/to/project/starter
-
-# GitHub Token (RECOMMENDED)
-# GITHUB_TOKEN=ghp_your-token-here
-
-# Logging level (optional)
-LOG_LEVEL=info
+```dotenv
+GITHUB_TOKEN=github_pat_your_token
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_REGION=us-east-1
+ANTHROPIC_MODEL=us.anthropic.claude-sonnet-4-5-20250929-v1:0
 ```
 
-### Running
+When AWS credentials are selected, the CLI enables Bedrock mode automatically. `GITHUB_TOKEN` and `ANTHROPIC_MODEL` are required for both authentication methods.
+
+### Optional variables
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `PROJECT_ROOT` | Working directory exposed to the agents | Current working directory |
+| `MAX_TURNS` | Maximum SDK turns available to a review | `60` |
+| `LOG_LEVEL` | Winston logging level | `info` |
+
+Set `PROJECT_ROOT` to this project directory when launching the CLI from elsewhere.
+
+## Usage
+
+Run commands from `projects/04_bounded_autonomy_guardrails/project/starter`.
+
+### Development
 
 ```bash
-# Development mode
-npm run dev -- <owner> <repo> <pr-number>
+npm run dev -- <owner> <repo> <positive-pr-number>
+```
 
-# Production build
+Example smoke test:
+
+```bash
+npm run dev -- octocat Hello-World 1
+```
+
+Required submission analyses:
+
+```bash
+npm run dev -- airaamane simple-todo-app 1
+npm run dev -- airaamane simple-todo-app 2
+npm run dev -- airaamane simple-todo-app 3
+```
+
+### Production build
+
+```bash
 npm run build
-npm start <owner> <repo> <pr-number>
-
-# Example
-npm run dev -- facebook react 12345
+npm start -- <owner> <repo> <positive-pr-number>
 ```
 
-### Testing
+The `--` forwards the repository arguments through npm to the CLI.
+
+## Generated reports
+
+Every successful review writes three PR-specific files to `reports/`:
+
+```text
+reports/<owner>-<repo>-pr-<number>.md
+reports/<owner>-<repo>-pr-<number>.html
+reports/<owner>-<repo>-pr-<number>.json
+```
+
+It also updates `reports/report.md`, `reports/report.html`, and `reports/report.json` as aliases for the latest review. Running all three required `airaamane/simple-todo-app` reviews therefore creates the nine distinct submission files while retaining the latest aliases.
+
+The JSON output contains pull request metadata, per-file code-quality findings, missing-test suggestions, refactoring recommendations, aggregate scores, and analysis metadata. Scores are validated as numbers from 0 through 100.
+
+## Validation and failure handling
+
+The CLI exits with an actionable message when:
+
+- owner, repository, or pull request number is missing;
+- the pull request number is not a positive integer;
+- `GITHUB_TOKEN` is missing;
+- neither Anthropic API nor complete AWS credentials are configured;
+- Bedrock is selected without `AWS_REGION`;
+- `ANTHROPIC_MODEL` is missing;
+- the SDK fails, times out, reaches its turn limit, or returns invalid structured output.
+
+Reviews use a 15-minute timeout and a sliding 60-second rate-limit window. The default limiter permits 50 requests per minute, 100,000 estimated tokens per minute, and five concurrent requests. Retry utilities add exponential backoff and jitter for transient operations.
+
+If a larger pull request reaches `error_max_turns`, raise the optional limit and retry:
+
+```dotenv
+MAX_TURNS=80
+```
+
+If the error reports a low Anthropic credit balance, add API credits or configure AWS Bedrock before retrying.
+
+## Development commands
 
 ```bash
-# Run all tests
+# Type-check and compile to dist/
+npm run build
+
+# Type-check without emitting files
+npm run lint
+
+# Run the test suite once
 npm test
 
-# Run specific test
-npm test -- orchestrator.test.ts
+# Run tests in watch mode
+npm run test:watch
 
-# Watch mode
-npm test -- --watch
+# Run one test file
+npm test -- tests/schemas.test.ts
 ```
 
-## Key Technologies
+The test suite covers schema acceptance and rejection, boundary values, JSON Schema conversion, retry and timeout behavior, rate limiting, and orchestrator result handling. The real `octocat/Hello-World` integration test is intentionally skipped during normal unit-test runs because it requires live credentials and network access; the CLI command above provides the live smoke test.
 
-- **Claude Agent SDK** - Multi-agent orchestration framework
-- **Model Context Protocol (MCP)** - External data integration
-- **Zod** - Schema validation and type safety
-- **TypeScript** - Type-safe development
-- **Vitest** - Testing framework
-- **Winston** - Structured logging
+On Windows, a missing `@rolldown/binding-win32-x64-msvc` error is an npm optional-dependency installation problem rather than a test failure. Remove `node_modules` and the lockfile generated on the incompatible platform, then run `npm install` again from Windows.
 
-## Success Criteria
-
-Your implementation is complete when:
-
-- [ ] TypeScript compiles without errors: `npm run build`
-- [ ] All tests pass: `npm test`
-- [ ] Can review a real PR: `npm start owner repo pr-number`
-- [ ] Generates reports in at least one format (MD, HTML, JSON)
-- [ ] Rate limiting prevents API throttling (Optional)
-- [ ] Errors are handled gracefully (Recommended)
-
-## Resources
+## Key technologies
 
 - [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Anthropic API Docs](https://docs.anthropic.com/)
-- [Zod Documentation](https://zod.dev/)
+- [Zod](https://zod.dev/)
+- TypeScript
+- Vitest
+- Winston
 
-Good luck!
+## Security notes
+
+- Credentials are read only from environment variables or `.env`.
+- No API keys or GitHub tokens should be stored in source files or generated reports.
+- Use the least-privileged GitHub token that can read the target repository.
+- Review generated findings before applying suggested code changes.
