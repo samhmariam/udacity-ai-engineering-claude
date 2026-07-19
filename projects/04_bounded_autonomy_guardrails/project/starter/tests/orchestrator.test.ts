@@ -1,4 +1,6 @@
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { Orchestrator } from '../src/orchestrator.js';
+import { ReviewReportSchema } from '../src/types/report-types.js';
 
 
 /**
@@ -44,10 +46,16 @@ describe('CodeReviewOrchestrator', () => {
 
 
   describe('Integration', () => {
-    // These tests require actual API keys and should be skipped in CI
-    it.skip('should review a real small PR', async () => {
-      // TODO: Test with a real public PR
-      // NOTE: Only run manually with valid API keys
+    it.skip('should review the real octocat/Hello-World PR #1', async () => {
+      const orchestrator = new Orchestrator();
+      const report = await orchestrator.reviewPullRequest('octocat', 'Hello-World', 1);
+
+      expect(ReviewReportSchema.safeParse(report).success).toBe(true);
+      expect(report.pullRequest).toEqual({
+        owner: 'octocat',
+        repo: 'Hello-World',
+        number: 1
+      });
     });
   });
 });

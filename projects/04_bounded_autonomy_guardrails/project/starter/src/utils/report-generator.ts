@@ -1,4 +1,4 @@
-import { ReviewReport } from '../types/report-types';
+import type { ReviewReport } from '../types/report-types.js';
 
 /**
  * Report Generator

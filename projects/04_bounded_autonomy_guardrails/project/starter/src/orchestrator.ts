@@ -12,6 +12,8 @@ import {
   ReviewReportSchema,
   type ReviewReport
 } from './types/report-types.js';
+import { globalRateLimiter, type RateLimiter } from './utils/rate-limiter.js';
+import { withTimeout } from './utils/error-handler.js';
 
 type QueryFunction = typeof query;
 
@@ -22,6 +24,9 @@ export interface OrchestratorOptions {
   cwd?: string;
   queryFn?: QueryFunction;
   mcpServers?: Options['mcpServers'];
+  rateLimiter?: RateLimiter;
+  estimatedTokensPerReview?: number;
+  reviewTimeoutMs?: number;
 }
 
 export class Orchestrator {
@@ -31,14 +36,24 @@ export class Orchestrator {
   private readonly cwd: string;
   private readonly queryFn: QueryFunction;
   private readonly mcpServers: Options['mcpServers'];
+  private readonly rateLimiter: RateLimiter;
+  private readonly estimatedTokensPerReview: number;
+  private readonly reviewTimeoutMs: number;
 
   constructor(options: OrchestratorOptions = {}) {
     this.model = options.model ?? process.env.ANTHROPIC_MODEL;
-    this.maxTurns = options.maxTurns ?? 30;
+    const environmentMaxTurns = Number(process.env.MAX_TURNS);
+    this.maxTurns = options.maxTurns
+      ?? (Number.isInteger(environmentMaxTurns) && environmentMaxTurns > 0
+        ? environmentMaxTurns
+        : 60);
     this.permissionMode = options.permissionMode ?? 'dontAsk';
     this.cwd = options.cwd ?? process.env.PROJECT_ROOT ?? process.cwd();
     this.queryFn = options.queryFn ?? query;
     this.mcpServers = options.mcpServers ?? mcpServersConfig;
+    this.rateLimiter = options.rateLimiter ?? globalRateLimiter;
+    this.estimatedTokensPerReview = options.estimatedTokensPerReview ?? 10_000;
+    this.reviewTimeoutMs = options.reviewTimeoutMs ?? 15 * 60_000;
   }
 
   async reviewPullRequest(
@@ -53,27 +68,45 @@ export class Orchestrator {
       throw new Error('ANTHROPIC_MODEL is required (or pass model to CodeReviewOrchestrator).');
     }
 
+    await this.rateLimiter.acquire(this.estimatedTokensPerReview);
+    try {
     const startedAt = Date.now();
     let resultMessage: SDKResultMessage | undefined;
+    const toolUseCounts = new Map<string, number>();
+    const assistantBlockCounts = new Map<string, number>();
+    const assistantText: string[] = [];
+    let sdkInitialization = 'not received';
 
     const response = this.queryFn({
       prompt: buildOrchestratorPrompt(owner, repo, prNumber),
       options: {
         agents: {
-          'code-quality-analyzer': codeQualityAnalyzer,
-          'test-coverage-analyzer': testCoverageAnalyzer,
-          'refactoring-suggester': refactoringSuggester
+          'code-quality-analyzer': {
+            ...codeQualityAnalyzer,
+            tools: ['Skill']
+          },
+          'test-coverage-analyzer': {
+            ...testCoverageAnalyzer,
+            tools: ['Skill']
+          },
+          'refactoring-suggester': {
+            ...refactoringSuggester,
+            tools: ['Skill']
+          }
         },
         allowedTools: [
           'Task',
+          'Skill',
           'mcp__github__get_pull_request',
           'mcp__github__get_pull_request_files',
-          'mcp__github__pull_request_read'
+          'mcp__github__pull_request_read',
+          'mcp__eslint__lint-files'
         ],
         mcpServers: this.mcpServers,
         model: this.model,
         maxTurns: this.maxTurns,
         permissionMode: this.permissionMode,
+        allowDangerouslySkipPermissions: this.permissionMode === 'bypassPermissions',
         cwd: this.cwd,
         persistSession: false,
         outputFormat: {
@@ -83,17 +116,61 @@ export class Orchestrator {
       }
     });
 
+    await withTimeout(async () => {
     for await (const message of response) {
+      if (message.type === 'system' && message.subtype === 'init') {
+        const mcpStatus = message.mcp_servers
+          .map(server => `${server.name}:${server.status}`)
+          .join(', ');
+        sdkInitialization = `tools=[${message.tools.join(', ')}], mcp=[${mcpStatus}]`;
+      }
+      if (message.type === 'assistant') {
+        for (const block of message.message.content) {
+          assistantBlockCounts.set(
+            block.type,
+            (assistantBlockCounts.get(block.type) ?? 0) + 1
+          );
+          if (block.type === 'text') {
+            assistantText.push(block.text.slice(0, 500));
+            if (/credit balance is too low/i.test(block.text)) {
+              throw new Error(
+                'Anthropic API credit balance is too low. Add credits or configure AWS Bedrock, then retry the review.'
+              );
+            }
+          }
+          if (block.type === 'tool_use') {
+            toolUseCounts.set(block.name, (toolUseCounts.get(block.name) ?? 0) + 1);
+          }
+        }
+      }
       if (message.type === 'result') {
         resultMessage = message;
       }
     }
+    }, this.reviewTimeoutMs, `Pull request review exceeded ${this.reviewTimeoutMs}ms`);
 
     if (!resultMessage) {
       throw new Error('The review completed without a result message.');
     }
     if (resultMessage.subtype !== 'success') {
-      throw new Error(`The review failed with SDK status: ${resultMessage.subtype}.`);
+      const toolSummary = [...toolUseCounts.entries()]
+        .map(([name, count]) => `${name}=${count}`)
+        .join(', ');
+      const blockSummary = [...assistantBlockCounts.entries()]
+        .map(([name, count]) => `${name}=${count}`)
+        .join(', ');
+      const denials = resultMessage.permission_denials
+        .map(denial => denial.tool_name)
+        .join(', ');
+      throw new Error(
+        `The review failed with SDK status: ${resultMessage.subtype}. `
+        + `SDK errors: ${resultMessage.errors.join('; ') || 'none'}. `
+        + `Permission denials: ${denials || 'none'}. `
+        + `Tool usage: ${toolSummary || 'none'}. `
+        + `Assistant blocks: ${blockSummary || 'none'}. `
+        + `Assistant text: ${assistantText.join(' | ') || 'none'}. `
+        + `Initialization: ${sdkInitialization}.`
+      );
     }
     if (resultMessage.structured_output === undefined) {
       throw new Error('The review result did not include structured output.');
@@ -157,7 +234,10 @@ export class Orchestrator {
       )
     };
 
-    return report;
+      return report;
+    } finally {
+      this.rateLimiter.release();
+    }
   }
 }
 

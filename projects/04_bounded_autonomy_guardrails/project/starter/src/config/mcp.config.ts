@@ -16,7 +16,7 @@ export const mcpServersConfig = {
    * GitHub MCP Server
    * Provides tools for GitHub API operations
    *
-   * Note: GITHUB_TOKEN is optional (recommended for private repos and higher rate limits).
+   * GITHUB_TOKEN is validated at startup by the CLI.
    * The GitHub MCP server expects GITHUB_PERSONAL_ACCESS_TOKEN as the env var name.
    * We map our GITHUB_TOKEN from .env to this expected name.
    */
@@ -25,7 +25,7 @@ export const mcpServersConfig = {
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-github'],
     env: {
-      GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_TOKEN || ''
+      GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_TOKEN ?? ''
     }
   },
 
